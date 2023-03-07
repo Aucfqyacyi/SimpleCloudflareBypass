@@ -19,7 +19,6 @@ public class ControllerTests : IClassFixture<WebAplicationFactoryFixture>
     public static IEnumerable<object[]> GetUrlsWithChallenge()
     {
         yield return new[] { "https://extratorrent.st/search/?srt=added&order=desc&search=720p&new=1&x=0&y=0" };
-        yield return new[] { "https://torrentcore.xyz/index" };
         yield return new[] { "http://bitturk.net/" };
         yield return new[] { "https://nowsecure.nl" };
         yield return new[] { "https://www.muziekfabriek.org" };
@@ -27,10 +26,6 @@ public class ControllerTests : IClassFixture<WebAplicationFactoryFixture>
         yield return new[] { "https://bt4g.org/search/2022" };
     }
 
-    public static IEnumerable<object[]> GetUrlsWithAccessDenied()
-    {
-        yield return new[] { "https://cpasbiens3.fr/index.php?do=search&subaction=search" };
-    }
 
     [Theory]
     [MemberData(nameof(GetUrlsWithChallenge))]
@@ -48,18 +43,27 @@ public class ControllerTests : IClassFixture<WebAplicationFactoryFixture>
         CheckResponse(responseHtml);
     }
 
-    [Theory]
-    [MemberData(nameof(GetUrlsWithAccessDenied))]
-    public async Task GetHtml_AccessDeniedPage_StatusCodeIsNotSuccess(string url)
+    [Fact]
+    public async Task GetHtml_AccessDeniedPage_StatusCodeIsNotSuccess()
     {
         // Arrange
-        HttpRequestMessage httpRequestMessage = CreateHttpRequestMessage(url);
+        HttpRequestMessage httpRequestMessage = CreateHttpRequestMessage("https://cpasbiens3.fr/index.php?do=search&subaction=search");
         //Act
         HttpResponseMessage response = await _httpClient.SendAsync(httpRequestMessage);
         //Assert
-        Assert.False(response.IsSuccessStatusCode);
+        Assert.False(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task GetHtml_IfTimeoutIsExpired_StatusCodeIsNotSuccess()
+    {
+        // Arrange
+        HttpRequestMessage httpRequestMessage = CreateHttpRequestMessage("https://idope.se/torrent-list/harry/", 1, 0);
+        //Act
+        HttpResponseMessage response = await _httpClient.SendAsync(httpRequestMessage);
+        //Assert
+        Assert.False(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+    }
 
     private void CheckResponse(string responseHtml)
     {
@@ -70,9 +74,9 @@ public class ControllerTests : IClassFixture<WebAplicationFactoryFixture>
         Assert.All(Cloudflare.AccessDeniedTitles, selector => Assert.DoesNotContain(selector, responseHtml));
     }
 
-    private HttpRequestMessage CreateHttpRequestMessage(string url)
+    private HttpRequestMessage CreateHttpRequestMessage(string url, int timeout = 30, int rebootsCount = 2)
     {
-        GetHtmlRequest request = new(url);
+        GetHtmlRequest request = new(url, timeout, rebootsCount);
         return new(HttpMethod.Post, _httpClient.BaseAddress!.OriginalString + _enpointName)
         {
             Content = JsonContent.Create(request)

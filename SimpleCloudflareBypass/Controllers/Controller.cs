@@ -20,7 +20,7 @@ public static class Controller
         {
             _mutex.WaitOne();
             int rebootsCounter = 0;
-            while (rebootsCounter < request.RebootsCount && cancellationToken.IsCancellationRequested is false)
+            do
             {
                 try
                 {
@@ -32,7 +32,7 @@ public static class Controller
                     chromeDriverFactory.Reboot();
                     rebootsCounter++;
                 }
-            }
+            } while (rebootsCounter < request.RebootsCount && cancellationToken.IsCancellationRequested is false);
         }
         finally
         {
@@ -45,14 +45,14 @@ public static class Controller
     {
         Console.WriteLine($"{DateTime.Now}: Start resolve the challenges, url({request.Url}).");
         IWebDriver webDriver = chromeDriverFactory.CreateIfCalledReboot();
-        webDriver.Url = request.Url;        
-        await WaitUntilResolvingChallengeAsync(webDriver, request.Timeout, cancellationToken);
+        webDriver.Url = request.Url;
+        await WaitUntilSolvingChallengeAsync(webDriver, request.Timeout, cancellationToken);
         Console.WriteLine($"{DateTime.Now}: Finish resolve the challenges, url({request.Url}).");
         return webDriver.PageSource;
     }
 
-    private static async ValueTask WaitUntilResolvingChallengeAsync(IWebDriver webDriver, int timeout, CancellationToken cancellationToken)
-    {        
+    private static async ValueTask WaitUntilSolvingChallengeAsync(IWebDriver webDriver, int timeout, CancellationToken cancellationToken)
+    {
         await Awaiter.WaitAsync(webDriver, driver =>
         {
             string pageTitle = webDriver.Title;

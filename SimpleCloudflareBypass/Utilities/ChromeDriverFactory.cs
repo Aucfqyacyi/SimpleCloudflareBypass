@@ -65,9 +65,9 @@ public class ChromeDriverFactory : IDisposable
     {
         if (_chromeDriver is not null)
         {
-            if(_chromeDriver.HasActiveDevToolsSession is true)
+            if (_chromeDriver.HasActiveDevToolsSession is true)
                 _chromeDriver!.GetDevToolsSession().Dispose();
             _chromeDriver.Dispose();
-        }        
+        }
     }
 }
